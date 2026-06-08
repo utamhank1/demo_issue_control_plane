@@ -78,9 +78,65 @@ def simulate_devin_workflow(issue_number, issue_title, repo_url):
     
     print(f"[SIMULATION] Completed remediation loop for Issue #{issue_number}.")
 
+def check_devin_session_status(session_id, issue_number):
+    """
+    Polls the live Devin API every 30 seconds to track actual progress 
+    and extract the authentic GitHub Pull Request URL once it is created.
+    """
+    headers = {
+        "Authorization": f"Bearer {DEVIN_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    # Find our active tracking session object in memory
+    session_obj = None
+    for s in SYSTEM_STATE["sessions"]:
+        if s["session_id"] == session_id:
+            session_obj = s
+            break
+
+    if not session_obj:
+        return
+
+    while True:
+        time.sleep(30) # Poll every 30 seconds to respect rate limits
+        try:
+            response = requests.get(f"{DEVIN_API_URL}/{session_id}", headers=headers, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Update status message directly from Devin's current execution state
+                session_obj["status"] = data.get("status_description", "Processing remediation...")
+                
+                # Check if Devin has created a Pull Request yet
+                # Devin's API payload typically exposes downstream artifacts inside an 'artifacts' or 'github' key
+                artifacts = data.get("artifacts", {})
+                real_pr_url = artifacts.get("pull_request_url") 
+                
+                if real_pr_url:
+                    session_obj["status"] = "Pull Request Opened Successfully"
+                    session_obj["progress_pct"] = 100
+                    session_obj["pr_url"] = real_pr_url # <-- Injects the actual live PR link!
+                    
+                    # Increment system metrics for the dashboard
+                    SYSTEM_STATE["metrics"]["completed_remediations"] += 1
+                    SYSTEM_STATE["metrics"]["prs_opened"] += 1
+                    break
+                    
+                # If the session failed or was stopped from the platform, kill the loop cleanly
+                if data.get("status") in ["failed", "stopped", "completed"]:
+                    if not real_pr_url:
+                        session_obj["status"] = f"Agent stopped: {data.get('status')}"
+                        session_obj["progress_pct"] = 100
+                    break
+            else:
+                print(f"[LIVE] Error polling status for {session_id}: {response.status_code}")
+        except Exception as e:
+            print(f"[LIVE] Exception while checking session status: {str(e)}")
+
 def trigger_real_devin(issue_number, issue_title, issue_body, repo_url):
     """
-    Fires the actual API request to the live Devin platform when variables are configured in the environment. This will create a real Devin session and spin up an agent to remediate the issue end-to-end.
+    Fires the actual API request to the live Devin platform and initializes live tracking. This will create a real devin agent that will remediate the issue end-to-end. 
     """
     print(f"[LIVE] Triggering real Devin Agent for Issue #{issue_number}...")
     
@@ -108,17 +164,26 @@ def trigger_real_devin(issue_number, issue_title, issue_body, repo_url):
         response = requests.post(DEVIN_API_URL, json=payload, headers=headers, timeout=15)
         if response.status_code in [200, 201]:
             data = response.json()
-            print(f"[LIVE] Successfully created Devin session: {data.get('session_id')}")
-            # Add tracking data to state to show on the dashboard
+            session_id = data.get("session_id")
+            print(f"[LIVE] Successfully created Devin session: {session_id}")
+            
+            # Setup initial dashboard entity
             SYSTEM_STATE["sessions"].insert(0, {
-                "session_id": data.get("session_id"),
+                "session_id": session_id,
                 "issue_number": issue_number,
                 "issue_title": issue_title,
                 "repository": repo_url,
-                "status": "Running via Devin API",
-                "progress_pct": 50,
-                "is_mock": False
+                "status": "Devin agent provisioning environment...",
+                "progress_pct": 20,
+                "is_mock": False,
+                "pr_url": None # Starts as None until found via polling loop
             })
+            SYSTEM_STATE["metrics"]["active_sessions"] += 1
+            
+            # Spin up a secondary background tracker thread to watch Devin cross the finish line
+            tracker = threading.Thread(target=check_devin_session_status, args=(session_id, issue_number))
+            tracker.start()
+            
         else:
             print(f"[LIVE] Failed to hit Devin API. Status: {response.status_code}, Error: {response.text}")
     except Exception as e:
