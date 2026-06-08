@@ -70,6 +70,52 @@ def simulate_devin_workflow(issue_number, issue_title, repo_url):
     
     print(f"[SIMULATION] Completed remediation loop for Issue #{issue_number}.")
 
+def trigger_real_devin(issue_number, issue_title, issue_body, repo_url):
+    """
+    Fires the actual API request to the live Devin platform when variables are configured in the environment. This will create a real Devin session and spin up an agent to remediate the issue end-to-end.
+    """
+    print(f"[LIVE] Triggering real Devin Agent for Issue #{issue_number}...")
+    
+    headers = {
+        "Authorization": f"Bearer {DEVIN_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    prompt = (
+        f"Fix the bug described in GitHub Issue #{issue_number} for {repo_url}.\n\n"
+        f"Title: {issue_title}\n"
+        f"Details:\n{issue_body}\n\n"
+        f"Instructions:\n"
+        f"1. Spin up the environment and replicate the issue.\n"
+        f"2. Apply the fix and run tests to ensure zero regression.\n"
+        f"3. CRITICAL: Open a Pull Request back to the main branch with your changes when complete."
+    )
+    
+    payload = {
+        "prompt": prompt,
+        "unbanned_tools": ["github", "shell", "browser"]
+    }
+    
+    try:
+        response = requests.post(DEVIN_API_URL, json=payload, headers=headers, timeout=15)
+        if response.status_code in [200, 201]:
+            data = response.json()
+            print(f"[LIVE] Successfully created Devin session: {data.get('session_id')}")
+            # Add tracking data to state to show on the dashboard
+            SYSTEM_STATE["sessions"].insert(0, {
+                "session_id": data.get("session_id"),
+                "issue_number": issue_number,
+                "issue_title": issue_title,
+                "repository": repo_url,
+                "status": "Running via Devin API",
+                "progress_pct": 50,
+                "is_mock": False
+            })
+        else:
+            print(f"[LIVE] Failed to hit Devin API. Status: {response.status_code}, Error: {response.text}")
+    except Exception as e:
+        print(f"[LIVE] Connection error to Devin API: {str(e)}")
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     payload = request.json
