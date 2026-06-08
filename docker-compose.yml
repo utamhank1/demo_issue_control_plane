@@ -1,8 +1,14 @@
 version: '3.8'
 
 services:
-  web_test:
-    image: nginx:alpine
-    container_name: hello_world_container
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: control_plane_backend
     ports:
-      - "8888:80"
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=development
+    volumes:
+      - ./backend:/app
