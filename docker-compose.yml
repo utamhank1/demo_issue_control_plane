@@ -5,4 +5,4 @@ services:
     image: nginx:alpine
     container_name: hello_world_container
     ports:
-      - "8080:80"
+      - "8888:80"
