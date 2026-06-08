@@ -2,7 +2,8 @@ import os
 import time
 from flask import Flask, request, jsonify
 import threading
-import json 
+import json
+import random
 
 app = Flask(__name__)
 
@@ -13,7 +14,7 @@ APP_ENV = os.getenv("APP_ENV", "demo")
 
 DEVIN_API_URL = "https://api.devin.ai/v1/sessions"
 
-# System Current state - global state to act as a lightweight data store for the dashboard. In production would 
+# System Current state - global state to act as a lightweight data store for the dashboard. In production would
 # like to load this to firestore or redis.
 SYSTEM_STATE = {
     "sessions": [],
@@ -24,6 +25,23 @@ SYSTEM_STATE = {
         "pass_rate": "93.3%"
     }
 }
+
+# Pool of realistic issues for simulations
+SIMULATION_ISSUES = [
+    {"title": "Security Vulnerability: Insecure Debug Endpoint Exposed", "type": "security"},
+    {"title": "SQL Injection Risk in User Search Endpoint", "type": "security"},
+    {"title": "XSS Vulnerability in Comment Rendering", "type": "security"},
+    {"title": "Performance: N+1 Query Problem in Dashboard Load", "type": "performance"},
+    {"title": "Memory Leak in WebSocket Connection Handler", "type": "performance"},
+    {"title": "Race Condition in Concurrent Request Handler", "type": "bug"},
+    {"title": "Deprecated Dependency: lodash v3 Contains Critical CVE", "type": "dependency"},
+    {"title": "Missing Error Logging in Payment Processing Flow", "type": "observability"},
+    {"title": "Type Mismatch in User Authentication Middleware", "type": "bug"},
+    {"title": "Unhandled Exception in Batch Data Import Job", "type": "bug"},
+]
+
+# Global state to track the next issue number for simulations
+NEXT_SIMULATION_ISSUE_NUMBER = 104
 
 def simulate_devin_workflow(issue_number, issue_title, repo_url):
     """
@@ -227,9 +245,15 @@ def get_state():
 # Endpoint to let reviewers trigger a mock remediation directly from the UI button
 @app.route('/api/simulate-trigger', methods=['POST'])
 def manual_simulation_trigger():
+    global NEXT_SIMULATION_ISSUE_NUMBER
+
     full_repo_url = f"https://github.com/{TARGET_REPOSITORY}"
-    
-    thread = threading.Thread(target=simulate_devin_workflow, args=(104, "Security Vulnerability: Insecure Debug Endpoint Exposed", full_repo_url))
+    issue_number = NEXT_SIMULATION_ISSUE_NUMBER
+    selected_issue = random.choice(SIMULATION_ISSUES)
+
+    NEXT_SIMULATION_ISSUE_NUMBER += 1
+
+    thread = threading.Thread(target=simulate_devin_workflow, args=(issue_number, selected_issue["title"], full_repo_url))
     thread.start()
     return jsonify({"status": "simulation_started"}), 200
 
