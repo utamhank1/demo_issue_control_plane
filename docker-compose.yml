@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  web_test:
+    image: nginx:alpine
+    container_name: hello_world_container
+    ports:
+      - "8080:80"
