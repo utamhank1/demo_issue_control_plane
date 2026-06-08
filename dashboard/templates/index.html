@@ -33,7 +33,9 @@
         .session-info { flex: 1; }
         .tag-row { display: flex; align-items: center; gap: 12px; }
         .badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; border: 1px solid; }
-        .badge-mock { bg-color: rgba(147, 51, 234, 0.2); color: #c084fc; border-color: rgba(168, 85, 247, 0.3); background-color: #3b0764; }
+        .badge-mock { color: #c084fc; border-color: rgba(168, 85, 247, 0.3); background-color: #3b0764; }
+        .badge-live { color: #34d399; border-color: rgba(52, 211, 153, 0.3); background-color: #064e3b; }
+        .badge-error { color: #f87171; border-color: rgba(248, 113, 113, 0.3); background-color: #7f1d1d; }
         .session-title { margin: 0; font-size: 16px; color: #ffffff; font-weight: 600; }
         .session-meta { margin: 4px 0 0 0; font-size: 12px; color: #94a3b8; }
         
@@ -44,6 +46,8 @@
         .status-badge { font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 6px; border: 1px solid; display: inline-block; }
         .status-active { color: #a5b4fc; background-color: #1e1b4b; border-color: #4338ca; animation: pulse 2s infinite; }
         .status-done { color: #6ee7b7; background-color: #064e3b; border-color: rgba(52, 211, 153, 0.3); }
+        .status-error { color: #fca5a5; background-color: #7f1d1d; border-color: #991b1b; }
+        .sim-banner { background-color: #78350f; color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); padding: 12px 20px; border-radius: 8px; margin-bottom: 24px; font-size: 14px; font-weight: 600; text-align: center; }
         .pr-link { font-size: 12px; color: #818cf8; text-decoration: underline; font-weight: 500; }
         
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
@@ -70,6 +74,12 @@
                 ⚡ Simulate 'devin-remediate' Event
             </button>
         </div>
+
+        {% if state.mode == "simulation" %}
+        <div class="sim-banner">
+            ⚠ No Devin API Key Detected: Simulation Mode Only
+        </div>
+        {% endif %}
 
         <div class="grid">
             <div class="card">
@@ -112,7 +122,13 @@
                 <div class="session-row">
                     <div class="session-info">
                         <div class="tag-row">
+                            {% if session.is_error %}
+                            <span class="badge badge-error">ERROR</span>
+                            {% elif session.is_mock %}
                             <span class="badge badge-mock">SIMULATED</span>
+                            {% else %}
+                            <span class="badge badge-live">LIVE</span>
+                            {% endif %}
                             <h4 class="session-title">Issue #{{ session.issue_number }}: {{ session.issue_title }}</h4>
                         </div>
                         <p class="session-meta">Repo: {{ session.repository }} | Session: <span style="font-family: monospace;">{{ session.session_id }}</span></p>
@@ -123,7 +139,12 @@
                     </div>
 
                     <div class="status-box">
-                        {% if session.pr_url %}
+                        {% if session.is_error %}
+                        <span class="status-badge status-error">
+                            ✗ Failed
+                        </span>
+                        <span style="font-size: 11px; color: #fca5a5; max-width: 300px; text-align: right;">{{ session.status }}</span>
+                        {% elif session.pr_url %}
                         <span class="status-badge status-done">
                             ✓ {{ session.status }}
                         </span>
