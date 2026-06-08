@@ -159,5 +159,10 @@ def manual_simulation_trigger():
     thread.start()
     return jsonify({"status": "simulation_started"}), 200
 
+@app.route('/', methods=['GET'])
+def health():
+    mode = "DEMO (Simulation)" if not DEVIN_API_KEY else "LIVE (Devin Connected)"
+    return {'status': 'healthy', 'mode': mode}, 200
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
