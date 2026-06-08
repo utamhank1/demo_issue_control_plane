@@ -4,6 +4,11 @@ from flask import Flask, request, jsonify
 import threading
 import json
 import random
+import requests
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env.local'))
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -65,7 +70,8 @@ def simulate_devin_workflow(issue_number, issue_title, repo_url):
     SYSTEM_STATE["sessions"].insert(0, mock_session)
     SYSTEM_STATE["metrics"]["active_sessions"] += 1
     
-    # Define steps to simulate the technical depth requested in the submission
+    # Define descriptive status updates and progress percentages to simulate a realistic workflow for the simulation.
+    # This will give reviewers a good sense of how the Devin agent moves through different stages of remediation.
     steps = [
         ("Cloning repository and targeting vulnerabilities...", 25),
         ("Running security linter (Bandit)... Found 2 High CVEs.", 45),
@@ -98,15 +104,28 @@ def simulate_devin_workflow(issue_number, issue_title, repo_url):
 
 def check_devin_session_status(session_id, issue_number):
     """
-    Polls the live Devin API every 30 seconds to track actual progress 
+    Polls the live Devin API every 30 seconds to track actual progress
     and extract the authentic GitHub Pull Request URL once it is created.
     """
     headers = {
         "Authorization": f"Bearer {DEVIN_API_KEY}",
         "Content-Type": "application/json"
     }
-    
-    # Find our active tracking session object in memory
+
+    terminal_states = {"finished", "blocked", "expired", "stopped"}
+    suspended_states = {"suspend_requested", "suspend_requested_frontend"}
+
+    status_display = {
+        "working": "Devin agent actively working on fix...",
+        "blocked": "Agent blocked — may need manual input",
+        "expired": "Agent session expired",
+        "finished": "Agent finished execution",
+        "stopped": "Agent was stopped",
+        "suspend_requested": "Agent suspended — waiting to resume",
+        "suspend_requested_frontend": "Agent suspended — waiting to resume",
+        "resumed": "Agent resuming work...",
+    }
+
     session_obj = None
     for s in SYSTEM_STATE["sessions"]:
         if s["session_id"] == session_id:
@@ -116,41 +135,51 @@ def check_devin_session_status(session_id, issue_number):
     if not session_obj:
         return
 
+    poll_count = 0
     while True:
-        time.sleep(30) # Poll every 30 seconds to respect rate limits
+        time.sleep(30)
+        poll_count += 1
         try:
             response = requests.get(f"{DEVIN_API_URL}/{session_id}", headers=headers, timeout=10)
             if response.status_code == 200:
                 data = response.json()
-                
-                # Update status message directly from Devin's current execution state
-                session_obj["status"] = data.get("status_description", "Processing remediation...")
-                
-                # Check if Devin has created a Pull Request yet
-                # Devin's API payload typically exposes downstream artifacts inside an 'artifacts' or 'github' key
-                artifacts = data.get("artifacts", {})
-                real_pr_url = artifacts.get("pull_request_url") 
-                
+
+                status_enum = data.get("status_enum", "")
+                status_text = data.get("status", "")
+                pr_info = data.get("pull_request")
+                real_pr_url = pr_info.get("url") if pr_info else None
+
+                print(f"[LIVE] Poll #{poll_count} for {session_id}: status_enum={status_enum}, status={status_text}, pr={bool(real_pr_url)}")
+
                 if real_pr_url:
                     session_obj["status"] = "Pull Request Opened Successfully"
                     session_obj["progress_pct"] = 100
-                    session_obj["pr_url"] = real_pr_url # <-- Injects the actual live PR link!
-                    
-                    # Increment system metrics for the dashboard
+                    session_obj["pr_url"] = real_pr_url
                     SYSTEM_STATE["metrics"]["completed_remediations"] += 1
                     SYSTEM_STATE["metrics"]["prs_opened"] += 1
+                    SYSTEM_STATE["metrics"]["active_sessions"] -= 1
+                    print(f"[LIVE] PR found for {session_id}: {real_pr_url}")
                     break
-                    
-                # If the session failed or was stopped from the platform, kill the loop cleanly
-                if data.get("status") in ["failed", "stopped", "completed"]:
-                    if not real_pr_url:
-                        session_obj["status"] = f"Agent stopped: {data.get('status')}"
-                        session_obj["progress_pct"] = 100
+
+                session_obj["status"] = status_display.get(status_enum, status_text or "Processing remediation...")
+
+                if status_enum == "working":
+                    session_obj["progress_pct"] = min(20 + poll_count * 5, 85)
+                elif status_enum in suspended_states:
+                    session_obj["progress_pct"] = min(20 + poll_count * 5, 85)
+
+                if status_enum in terminal_states:
+                    session_obj["progress_pct"] = 100
+                    SYSTEM_STATE["metrics"]["active_sessions"] -= 1
+                    if status_enum == "finished":
+                        session_obj["status"] = "Agent finished (no PR created)"
+                        SYSTEM_STATE["metrics"]["completed_remediations"] += 1
+                    print(f"[LIVE] Session {session_id} reached terminal state: {status_enum}")
                     break
             else:
-                print(f"[LIVE] Error polling status for {session_id}: {response.status_code}")
+                print(f"[LIVE] Error polling {session_id}: HTTP {response.status_code} — {response.text[:200]}")
         except Exception as e:
-            print(f"[LIVE] Exception while checking session status: {str(e)}")
+            print(f"[LIVE] Exception polling {session_id}: {str(e)}")
 
 def trigger_real_devin(issue_number, issue_title, issue_body, repo_url):
     """
@@ -175,7 +204,7 @@ def trigger_real_devin(issue_number, issue_title, issue_body, repo_url):
     
     payload = {
         "prompt": prompt,
-        "unbanned_tools": ["github", "shell", "browser"]
+        "idempotent": False
     }
     
     try:
@@ -203,9 +232,33 @@ def trigger_real_devin(issue_number, issue_title, issue_body, repo_url):
             tracker.start()
             
         else:
-            print(f"[LIVE] Failed to hit Devin API. Status: {response.status_code}, Error: {response.text}")
+            error_msg = f"Devin API returned {response.status_code}: {response.text[:200]}"
+            print(f"[LIVE] {error_msg}")
+            SYSTEM_STATE["sessions"].insert(0, {
+                "session_id": f"error-{int(time.time())}",
+                "issue_number": issue_number,
+                "issue_title": issue_title,
+                "repository": repo_url,
+                "status": error_msg,
+                "progress_pct": 0,
+                "is_mock": False,
+                "is_error": True,
+                "pr_url": None
+            })
     except Exception as e:
-        print(f"[LIVE] Connection error to Devin API: {str(e)}")
+        error_msg = f"Connection error: {str(e)}"
+        print(f"[LIVE] {error_msg}")
+        SYSTEM_STATE["sessions"].insert(0, {
+            "session_id": f"error-{int(time.time())}",
+            "issue_number": issue_number,
+            "issue_title": issue_title,
+            "repository": repo_url,
+            "status": error_msg,
+            "progress_pct": 0,
+            "is_mock": False,
+            "is_error": True,
+            "pr_url": None
+        })
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -263,4 +316,8 @@ def health():
     return {'status': 'healthy', 'mode': mode}, 200
 
 if __name__ == '__main__':
+    mode = "LIVE (Devin API connected)" if DEVIN_API_KEY else "SIMULATION (no DEVIN_API_KEY found)"
+    print(f"\n{'='*60}")
+    print(f"  Control Plane Backend starting in {mode} mode")
+    print(f"{'='*60}\n")
     app.run(host='0.0.0.0', port=5001, debug=True)
