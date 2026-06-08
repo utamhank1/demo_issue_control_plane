@@ -1,7 +1,15 @@
+import os
 from flask import Flask, request
 import json
 
 app = Flask(__name__)
+
+# Load configurations from environment variables
+DEVIN_API_KEY = os.getenv("DEVIN_API_KEY", "").strip()
+TARGET_REPOSITORY = os.getenv("TARGET_REPOSITORY", "utamhank1/superset_exploration")
+APP_ENV = os.getenv("APP_ENV", "demo")
+
+DEVIN_API_URL = "https://api.devin.ai/v1/sessions"
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
