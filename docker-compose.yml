@@ -8,7 +8,14 @@ services:
     container_name: control_plane_backend
     ports:
       - "5001:5001"
+    env_file:
+      - .env.local
     environment:
       - FLASK_ENV=development
+      - FLASK_ENV=development
+      - DEVIN_API_KEY=${DEVIN_API_KEY}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - TARGET_REPOSITORY=${TARGET_REPOSITORY:-utamhank1/superset_exploration}
+      - APP_ENV=${APP_ENV:-demo}
     volumes:
       - ./backend:/app
