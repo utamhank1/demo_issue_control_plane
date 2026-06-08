@@ -118,7 +118,17 @@ def trigger_real_devin(issue_number, issue_title, issue_body, repo_url):
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    payload = request.json
+    payload = request.json or {}
+
+    action = payload.get("action")
+    issue = payload.get("issue", {})
+    label = payload.get("label", {})
+    repository = payload.get("repository", {})
+    issue_number = issue.get("number")
+    issue_title = issue.get("title", "")
+    issue_body = issue.get("body", "")
+    repo_url = repository.get("html_url", "")
+    
     print("Received webhook payload!")
     print(json.dumps(payload, indent=2))
     return 'OK', 200
