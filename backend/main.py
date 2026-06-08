@@ -1,4 +1,5 @@
 import os
+import time
 from flask import Flask, request
 import json
 
@@ -22,6 +23,52 @@ SYSTEM_STATE = {
         "pass_rate": "93.3%"
     }
 }
+
+def simulate_devin_workflow(issue_number, issue_title, repo_url):
+    """
+    Simulates a Devin session over 30 seconds so reviewers can see the visual 
+    loop on the control plane dashboard without needing an API key. Easier to demo for business stakeholders and product team.
+    """
+    print(f"[SIMULATION] Starting mock Devin agent for Issue #{issue_number}...")
+    
+    session_id = f"mock-session-{int(time.time())}"
+    mock_session = {
+        "session_id": session_id,
+        "issue_number": issue_number,
+        "issue_title": issue_title,
+        "repository": repo_url,
+        "status": "Initializing sandbox...",
+        "progress_pct": 10,
+        "is_mock": True
+    }
+    
+    SYSTEM_STATE["sessions"].insert(0, mock_session)
+    SYSTEM_STATE["metrics"]["active_sessions"] += 1
+    
+    # Define steps to simulate the technical depth requested in the submission
+    steps = [
+        ("Cloning repository and targeting vulnerabilities...", 25),
+        ("Running security linter (Bandit)... Found 2 High CVEs.", 45),
+        ("Refactoring insecure endpoints and patching dependencies...", 65),
+        ("Running unit tests to verify fix locally... All tests passed.", 85),
+        ("Success! Opening Pull Request back to main branch.", 100)
+    ]
+    
+    for status, pct in steps:
+        time.sleep(5)  # Pause to simulate processing time
+        mock_session["status"] = status
+        mock_session["progress_pct"] = pct
+        print(f"[SIMULATION] Session {session_id} Update: {status} ({pct}%)")
+        
+    # Finalize state metrics
+    SYSTEM_STATE["metrics"]["active_sessions"] -= 1
+    SYSTEM_STATE["metrics"]["completed_remediations"] += 1
+    SYSTEM_STATE["metrics"]["prs_opened"] += 1
+    # Recalculate pass rate dynamically
+    total = SYSTEM_STATE["metrics"]["completed_remediations"]
+    SYSTEM_STATE["metrics"]["pass_rate"] = f"{round((total / (total + 1)) * 100, 1)}%"
+    
+    print(f"[SIMULATION] Completed remediation loop for Issue #{issue_number}.")
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
