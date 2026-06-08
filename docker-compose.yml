@@ -11,6 +11,7 @@ services:
     env_file:
       - .env.local
     environment:
+      - PYTHONUNBUFFERED=1
       - FLASK_ENV=development
       - TARGET_REPOSITORY=${TARGET_REPOSITORY:-utamhank1/superset_exploration}
       - APP_ENV=${APP_ENV:-demo}

@@ -25,9 +25,9 @@ SYSTEM_STATE = {
     "sessions": [],
     "metrics": {
         "active_sessions": 0,
-        "completed_remediations": 14,  # Pre-seed some baseline numbers for visual punch
-        "prs_opened": 14,
-        "pass_rate": "93.3%"
+        "completed_remediations": 14 if not DEVIN_API_KEY else 0,
+        "prs_opened": 14 if not DEVIN_API_KEY else 0,
+        "pass_rate": "93.3%" if not DEVIN_API_KEY else "N/A"
     }
 }
 
@@ -96,9 +96,8 @@ def simulate_devin_workflow(issue_number, issue_title, repo_url):
     SYSTEM_STATE["metrics"]["active_sessions"] -= 1
     SYSTEM_STATE["metrics"]["completed_remediations"] += 1
     SYSTEM_STATE["metrics"]["prs_opened"] += 1
-    # Recalculate pass rate dynamically
     total = SYSTEM_STATE["metrics"]["completed_remediations"]
-    SYSTEM_STATE["metrics"]["pass_rate"] = f"{round((total / (total + 1)) * 100, 1)}%"
+    SYSTEM_STATE["metrics"]["pass_rate"] = f"{round((total / max(total, 1)) * 100, 1)}%"
     
     print(f"[SIMULATION] Completed remediation loop for Issue #{issue_number}.")
 
@@ -293,7 +292,8 @@ def webhook():
 # Internal endpoints for your dashboard to fetch telemetry data.
 @app.route('/api/state', methods=['GET'])
 def get_state():
-    return jsonify(SYSTEM_STATE), 200
+    state = {**SYSTEM_STATE, "mode": "live" if DEVIN_API_KEY else "simulation"}
+    return jsonify(state), 200
 
 # Endpoint to let reviewers trigger a mock remediation directly from the UI button
 @app.route('/api/simulate-trigger', methods=['POST'])

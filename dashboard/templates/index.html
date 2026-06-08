@@ -47,6 +47,7 @@
         .status-active { color: #a5b4fc; background-color: #1e1b4b; border-color: #4338ca; animation: pulse 2s infinite; }
         .status-done { color: #6ee7b7; background-color: #064e3b; border-color: rgba(52, 211, 153, 0.3); }
         .status-error { color: #fca5a5; background-color: #7f1d1d; border-color: #991b1b; }
+        .sim-banner { background-color: #78350f; color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); padding: 12px 20px; border-radius: 8px; margin-bottom: 24px; font-size: 14px; font-weight: 600; text-align: center; }
         .pr-link { font-size: 12px; color: #818cf8; text-decoration: underline; font-weight: 500; }
         
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
@@ -73,6 +74,12 @@
                 ⚡ Simulate 'devin-remediate' Event
             </button>
         </div>
+
+        {% if state.mode == "simulation" %}
+        <div class="sim-banner">
+            ⚠ No Devin API Key Detected: Simulation Mode Only
+        </div>
+        {% endif %}
 
         <div class="grid">
             <div class="card">
