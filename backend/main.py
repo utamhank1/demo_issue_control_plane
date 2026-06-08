@@ -1,6 +1,7 @@
 import os
 import time
-from flask import Flask, request
+from flask import Flask, request, jsonify
+import threading
 import json
 
 app = Flask(__name__)
@@ -128,14 +129,28 @@ def webhook():
     issue_title = issue.get("title", "")
     issue_body = issue.get("body", "")
     repo_url = repository.get("html_url", "")
-    
-    print("Received webhook payload!")
-    print(json.dumps(payload, indent=2))
-    return 'OK', 200
 
-@app.route('/', methods=['GET'])
-def health():
-    return {'status': 'healthy'}, 200
+    # Match the exact trigger loop: When an issue is labeled "devin-remediate"
+    if action == "labeled" and label.get("name") == "devin-remediate":
+        print(f"\n Target event hit! Issue #{issue_number} labeled 'devin-remediate'.")
+        
+        # Offload execution to a background thread so the webhook finishes immediately. 
+        # GitHub requires a response in <10 seconds or it counts as a timeout failure.
+        if not DEVIN_API_KEY:
+            thread = threading.Thread(target=simulate_devin_workflow, args=(issue_number, issue_title, repo_url))
+            thread.start()
+            return jsonify({"status": "simulating", "message": "No Devin API Key found. Initiating control plane simulation mode."}), 200
+        else:
+            thread = threading.Thread(target=trigger_real_devin, args=(issue_number, issue_title, issue_body, repo_url))
+            thread.start()
+            return jsonify({"status": "processing", "message": "Live Devin session loop initiated via API."}), 200
+
+    return jsonify({"status": "ignored", "message": "Event did not match 'devin-remediate' labeling parameters."}), 200
+
+# Internal endpoints for your dashboard to fetch telemetry data.
+@app.route('/api/state', methods=['GET'])
+def get_state():
+    return jsonify(SYSTEM_STATE), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
