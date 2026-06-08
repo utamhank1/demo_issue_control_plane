@@ -2,7 +2,7 @@ import os
 import time
 from flask import Flask, request, jsonify
 import threading
-import json
+import json 
 
 app = Flask(__name__)
 
@@ -151,6 +151,13 @@ def webhook():
 @app.route('/api/state', methods=['GET'])
 def get_state():
     return jsonify(SYSTEM_STATE), 200
+
+# Endpoint to let reviewers trigger a mock remediation directly from the UI button
+@app.route('/api/simulate-trigger', methods=['POST'])
+def manual_simulation_trigger():
+    thread = threading.Thread(target=simulate_devin_workflow, args=(104, "Security Vulnerability: Insecure Debug Endpoint Exposed", TARGET_REPOSITORY))
+    thread.start()
+    return jsonify({"status": "simulation_started"}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
