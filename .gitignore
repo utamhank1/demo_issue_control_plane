@@ -1,0 +1,19 @@
+# Ignore these files.
+config.env
+
+# Ignore all files ending with .log 
+*.log
+
+# Exception: Do NOT ignore this specific log file
+!important.log
+
+# Ignore the entire node_modules directory
+node_modules/
+
+# Ignore all .pdf files inside a specific directory
+documentation/*.pdf
+
+# Ignore all temporary files inside any "tmp" directory, regardless of depth
+**/tmp/*.tmp
+
+# Source: https://git-scm.com/docs/gitignore
