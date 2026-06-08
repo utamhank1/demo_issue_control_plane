@@ -225,7 +225,6 @@ def get_state():
     return jsonify(SYSTEM_STATE), 200
 
 # Endpoint to let reviewers trigger a mock remediation directly from the UI button
-# Endpoint to let reviewers trigger a mock remediation directly from the UI button
 @app.route('/api/simulate-trigger', methods=['POST'])
 def manual_simulation_trigger():
     full_repo_url = f"https://github.com/{TARGET_REPOSITORY}"
