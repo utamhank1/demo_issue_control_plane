@@ -1,5 +1,5 @@
 # Ignore these files.
-config.env
+.env.local
 
 # Ignore all files ending with .log 
 *.log
