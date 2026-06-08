@@ -40,7 +40,8 @@ def simulate_devin_workflow(issue_number, issue_title, repo_url):
         "repository": repo_url,
         "status": "Initializing sandbox...",
         "progress_pct": 10,
-        "is_mock": True
+        "is_mock": True,
+        "pr_url": None
     }
     
     SYSTEM_STATE["sessions"].insert(0, mock_session)
@@ -60,6 +61,12 @@ def simulate_devin_workflow(issue_number, issue_title, repo_url):
         mock_session["status"] = status
         mock_session["progress_pct"] = pct
         print(f"[SIMULATION] Session {session_id} Update: {status} ({pct}%)")
+
+    # Final step: Complete the workflow, change status text, and add the hyperlink.
+    time.sleep(5)
+    mock_session["status"] = "Pull Request Opened Successfully"
+    mock_session["progress_pct"] = 100
+    mock_session["pr_url"] = f"{repo_url}/pulls"  # Points to the repo's PR tab for the simulation
         
     # Finalize state metrics
     SYSTEM_STATE["metrics"]["active_sessions"] -= 1

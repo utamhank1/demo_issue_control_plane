@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,6 +18,7 @@
         }
     </script>
 </head>
+
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
     <div class="max-w-6xl mx-auto px-4 py-8">
         <div class="flex justify-between items-center border-b border-slate-800 pb-6 mb-8">
@@ -24,7 +26,8 @@
                 <h1 class="text-3xl font-bold text-white tracking-tight">Devin Control Plane</h1>
                 <p class="text-slate-400 mt-1">Autonomous Security Vulnerability Remediation Pipeline</p>
             </div>
-            <button onclick="triggerSimulation()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-lg shadow transition-all text-sm">
+            <button onclick="triggerSimulation()"
+                class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-5 py-2.5 rounded-lg shadow transition-all text-sm">
                 ⚡ Simulate Inbound Webhook
             </button>
         </div>
@@ -51,7 +54,10 @@
         <div class="bg-gradient-to-r from-indigo-950 to-slate-800 p-6 rounded-xl border border-indigo-500/30 mb-10">
             <h3 class="text-md font-semibold text-indigo-300 uppercase tracking-wide">💡 Core Business Value Impact</h3>
             <p class="text-slate-300 mt-2 text-sm leading-relaxed">
-                "Typical enterprise CVEs sit unaddressed for over 60+ days due to backlog resource friction. This autonomous control plane cuts remediation loops to <strong class="text-white">under an hour</strong> with <strong class="text-white">zero engineering overhead</strong>, maintaining continuous open-source security posture."
+                "Typical enterprise CVEs sit unaddressed for over 60+ days due to backlog resource friction. This
+                autonomous control plane cuts remediation loops to <strong class="text-white">under an hour</strong>
+                with <strong class="text-white">zero engineering overhead</strong>, maintaining continuous open-source
+                security posture."
             </p>
         </div>
 
@@ -59,30 +65,29 @@
             <h2 class="text-xl font-bold text-white mb-4">Active Remediation Pipelines</h2>
             {% if not state.sessions %}
             <div class="text-center py-12 text-slate-500 border-2 border-dashed border-slate-700 rounded-lg">
-                No active Devin agent execution threads. Add a <code class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400">devin-remediate</code> label in GitHub or click 'Simulate Inbound Webhook' above.
+                No active Devin agent execution threads. Add a <code
+                    class="bg-slate-900 px-1.5 py-0.5 rounded text-indigo-400">devin-remediate</code> label in GitHub or
+                click 'Simulate Inbound Webhook' above.
             </div>
             {% else %}
             <div class="space-y-4">
                 {% for session in state.sessions %}
-                <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div class="flex-1">
-                        <div class="flex items-center gap-3">
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded {% if session.is_mock %}bg-purple-900/50 text-purple-300 border border-purple-500/30{% else %}bg-emerald-900/50 text-emerald-300 border border-emerald-500/30{% endif %}">
-                                {{ "SIMULATED" if session.is_mock else "LIVE API" }}
-                            </span>
-                            <h4 class="font-semibold text-white text-md">Issue #{{ session.issue_number }}: {{ session.issue_title }}</h4>
-                        </div>
-                        <p class="text-xs text-slate-400 mt-1">Repo: {{ session.repository }} | Session: <span class="font-mono text-slate-300">{{ session.session_id }}</span></p>
-                        
-                        <div class="w-full bg-slate-800 rounded-full h-2 mt-3 overflow-hidden">
-                            <div class="bg-indigo-500 h-2 transition-all duration-500" style="width: {{ session.progress_pct }}%"></div>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <span class="inline-block text-xs font-medium text-indigo-300 bg-indigo-950 border border-indigo-800 px-3 py-1.5 rounded-md animate-pulse">
-                            ● {{ session.status }}
-                        </span>
-                    </div>
+                <div class="text-right flex flex-col items-end gap-2">
+                    {% if session.pr_url %}
+                    <span
+                        class="inline-block text-xs font-semibold text-emerald-300 bg-emerald-950/80 border border-emerald-500/30 px-3 py-1.5 rounded-md shadow-sm">
+                        ✓ {{ session.status }}
+                    </span>
+                    <a href="{{ session.pr_url }}" target="_blank"
+                        class="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 font-medium underline transition-all">
+                        View Pull Request ↗
+                    </a>
+                    {% else %}
+                    <span
+                        class="inline-block text-xs font-medium text-indigo-300 bg-indigo-950 border border-indigo-800 px-3 py-1.5 rounded-md animate-pulse">
+                        ● {{ session.status }}
+                    </span>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -90,4 +95,5 @@
         </div>
     </div>
 </body>
+
 </html>
