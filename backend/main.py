@@ -225,9 +225,12 @@ def get_state():
     return jsonify(SYSTEM_STATE), 200
 
 # Endpoint to let reviewers trigger a mock remediation directly from the UI button
+# Endpoint to let reviewers trigger a mock remediation directly from the UI button
 @app.route('/api/simulate-trigger', methods=['POST'])
 def manual_simulation_trigger():
-    thread = threading.Thread(target=simulate_devin_workflow, args=(104, "Security Vulnerability: Insecure Debug Endpoint Exposed", TARGET_REPOSITORY))
+    full_repo_url = f"https://github.com/{TARGET_REPOSITORY}"
+    
+    thread = threading.Thread(target=simulate_devin_workflow, args=(104, "Security Vulnerability: Insecure Debug Endpoint Exposed", full_repo_url))
     thread.start()
     return jsonify({"status": "simulation_started"}), 200
 
