@@ -2,7 +2,7 @@
 
 An observability dashboard that demonstrates an autonomous vulnerability remediation pipeline powered by [Devin AI](https://devin.ai). When a GitHub issue is labeled `devin-remediate`, the control plane spins up a Devin agent that clones the repo, applies a fix, runs tests, and opens a pull request - all visible in real-time on the dashboard.
 
-<img width="1144" height="1321" alt="image" src="https://github.com/user-attachments/assets/e3ecb86f-8c1a-406a-8577-da7272ea562b" />
+<img width="1187" height="1335" alt="image" src="https://github.com/user-attachments/assets/7d0048a7-e9d0-4a8e-aeda-4948268ed5cc" />
 
 
 The app ships with a **simulation mode** that runs the full visual workflow without any API keys, making it easy to demo for stakeholders.
