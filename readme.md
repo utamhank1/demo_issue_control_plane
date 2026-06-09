@@ -5,7 +5,7 @@ An observability dashboard that demonstrates an autonomous vulnerability remedia
 <img width="1144" height="1321" alt="image" src="https://github.com/user-attachments/assets/e3ecb86f-8c1a-406a-8577-da7272ea562b" />
 
 
-The app ships with a **simulation mode** that runs the full visual workflow without any API keys, making it easy to demo for stakeholders.https://github.com/utamhank1/demo_issue_control_plane/blob/feature/distribution-packaging/readme.md
+The app ships with a **simulation mode** that runs the full visual workflow without any API keys, making it easy to demo for stakeholders.https://github.com/utamhank1/demo_issue_control_plane/readme.md
 
 ---
 
