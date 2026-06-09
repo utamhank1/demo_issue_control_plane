@@ -8,15 +8,25 @@ The app ships with a **simulation mode** that runs the full visual workflow with
 
 ## Quick Start (Simulation Mode)
 
-No API keys or configuration needed. Just clone and run:
+**Requirements:**
+- Docker and Docker Compose (latest version highly recommended)
 
+**Steps:**
+
+1. Clone the repository to your machine:
 ```bash
 git clone <this-repo-url>
 cd demo_issue_observability_plane
+```
+
+2. Run the app from the cloned directory:
+```bash
 docker compose up --build
 ```
 
-Open **http://localhost:3000** in your browser and click **"Simulate 'devin-remediate' Event"** to watch the pipeline animate through a 30-second mock remediation cycle.
+3. Open **http://localhost:3000** in your browser and click **"Simulate 'devin-remediate' Event"** to watch the pipeline animate through a 30-second mock remediation cycle.
+
+No API keys or configuration needed — simulation mode works out of the box.
 
 ---
 
