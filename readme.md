@@ -1,8 +1,8 @@
-# Devin Control Plane -- Autonomous Security Remediation Dashboard
+# Devin Control Plane - Autonomous Security Remediation Dashboard
 
 An observability dashboard that demonstrates an autonomous vulnerability remediation pipeline powered by [Devin AI](https://devin.ai). When a GitHub issue is labeled `devin-remediate`, the control plane spins up a Devin agent that clones the repo, applies a fix, runs tests, and opens a pull request -- all visible in real-time on the dashboard.
 
-The app ships with a **simulation mode** that runs the full visual workflow without any API keys, making it easy to demo for stakeholders.
+The app ships with a **simulation mode** that runs the full visual workflow without any API keys, making it easy to demo for stakeholders.https://github.com/utamhank1/demo_issue_control_plane/blob/feature/distribution-packaging/readme.md
 
 ---
 
