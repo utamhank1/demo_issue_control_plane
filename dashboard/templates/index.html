@@ -49,6 +49,12 @@
         .status-error { color: #fca5a5; background-color: #7f1d1d; border-color: #991b1b; }
         .sim-banner { background-color: #78350f; color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); padding: 12px 20px; border-radius: 8px; margin-bottom: 24px; font-size: 14px; font-weight: 600; text-align: center; }
         .pr-link { font-size: 12px; color: #818cf8; text-decoration: underline; font-weight: 500; }
+        .test-coverage { margin-top: 4px; padding: 4px 10px; border-radius: 6px; border: 1px solid; display: inline-block; text-align: right; }
+        .test-green { color: #34d399; border-color: rgba(52, 211, 153, 0.3); background-color: #064e3b; }
+        .test-yellow { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); background-color: #78350f; }
+        .test-red { color: #f87171; border-color: rgba(248, 113, 113, 0.3); background-color: #7f1d1d; }
+        .test-pct { font-size: 14px; font-weight: 700; }
+        .test-detail { font-size: 10px; opacity: 0.8; }
         
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
@@ -95,8 +101,8 @@
                 <p class="card-val val-blue">{{ state.metrics.prs_opened }}</p>
             </div>
             <div class="card">
-                <p class="card-label">Mitigation Success Rate</p>
-                <p class="card-val val-amber">{{ state.metrics.pass_rate }}</p>
+                <p class="card-label">Devin PR Fix Test Pass Rate</p>
+                <p class="card-val val-amber">{{ state.metrics.avg_test_pass_rate }}</p>
             </div>
         </div>
 
@@ -151,6 +157,12 @@
                         <a href="{{ session.pr_url }}" target="_blank" class="pr-link">
                             View Pull Request ↗
                         </a>
+                        {% if session.test_pct is defined and session.test_pct is not none %}
+                        <div class="test-coverage {% if session.test_pct >= 95 %}test-green{% elif session.test_pct >= 70 %}test-yellow{% else %}test-red{% endif %}">
+                            <span class="test-pct">{{ session.test_pct }}%</span>
+                            <span class="test-detail">{{ session.test_passed }}/{{ session.test_total }} tests passed</span>
+                        </div>
+                        {% endif %}
                         {% else %}
                         <span class="status-badge status-active">
                             ● {{ session.status }}
