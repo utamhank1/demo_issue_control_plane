@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -9,7 +7,8 @@ services:
     ports:
       - "5001:5001"
     env_file:
-      - .env.local
+      - path: .env.local
+        required: false
     environment:
       - PYTHONUNBUFFERED=1
       - FLASK_ENV=development
@@ -18,7 +17,6 @@ services:
     volumes:
       - ./backend:/app
 
-  # The New Observability UI
   dashboard:
     build:
       context: ./dashboard
@@ -28,5 +26,18 @@ services:
       - "3000:3000"
     environment:
       - BACKEND_URL=http://backend:5001
+    depends_on:
+      - backend
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: control_plane_ngrok
+    profiles:
+      - webhook
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command: http backend:5001
+    ports:
+      - "4040:4040"
     depends_on:
       - backend

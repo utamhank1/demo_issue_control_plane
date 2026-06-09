@@ -61,7 +61,7 @@
     <script>
         setInterval(() => { location.reload(); }, 3000);
         async function triggerSimulation() {
-            await fetch('http://localhost:5001/api/simulate-trigger', { method: 'POST' });
+            await fetch('/api/simulate-trigger', { method: 'POST' });
             alert('Simulation Webhook Fired! Watch the pipeline progress below.');
             location.reload();
         }
