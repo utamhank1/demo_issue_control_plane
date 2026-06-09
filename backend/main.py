@@ -1,4 +1,5 @@
 import os
+import re
 import time
 from flask import Flask, request, jsonify
 import threading
@@ -27,7 +28,7 @@ SYSTEM_STATE = {
         "active_sessions": 0,
         "completed_remediations": 14 if not DEVIN_API_KEY else 0,
         "prs_opened": 14 if not DEVIN_API_KEY else 0,
-        "pass_rate": "93.3%" if not DEVIN_API_KEY else "N/A"
+        "avg_test_pass_rate": "93.3%" if not DEVIN_API_KEY else "N/A"
     }
 }
 
@@ -47,6 +48,39 @@ SIMULATION_ISSUES = [
 
 # Global state to track the next issue number for simulations
 NEXT_SIMULATION_ISSUE_NUMBER = 104
+
+def generate_test_results():
+    test_total = random.choice([24, 28, 32, 36, 40])
+    pass_rate = random.triangular(0.50, 1.0, 0.92)
+    test_passed = min(round(test_total * pass_rate), test_total)
+    test_pct = round((test_passed / test_total) * 100, 1)
+    return test_passed, test_total, test_pct
+
+def recompute_avg_test_pass_rate():
+    sessions_with_tests = [s for s in SYSTEM_STATE["sessions"] if s.get("test_pct") is not None]
+    if sessions_with_tests:
+        avg = sum(s["test_pct"] for s in sessions_with_tests) / len(sessions_with_tests)
+        SYSTEM_STATE["metrics"]["avg_test_pass_rate"] = f"{round(avg, 1)}%"
+    else:
+        SYSTEM_STATE["metrics"]["avg_test_pass_rate"] = "N/A"
+
+def extract_test_results_from_messages(messages):
+    for msg in reversed(messages):
+        text = msg.get("message", "") or msg.get("content", "") or ""
+        m = re.search(r'[Aa]ll\s+(\d+)\s+(?:unit\s+)?tests?\s+.*?pass', text)
+        if m:
+            total = int(m.group(1))
+            return total, total, 100.0
+        m = re.search(r'(\d+)/(\d+)\s+tests?\s+pass', text)
+        if m:
+            passed, total = int(m.group(1)), int(m.group(2))
+            return passed, total, round((passed / max(total, 1)) * 100, 1)
+        m = re.search(r'(\d+)\s+(?:unit\s+)?tests?\s+pass(?:ed|ing)?.*?(\d+)\s+fail', text)
+        if m:
+            passed, failed = int(m.group(1)), int(m.group(2))
+            total = passed + failed
+            return passed, total, round((passed / max(total, 1)) * 100, 1)
+    return None
 
 def simulate_devin_workflow(issue_number, issue_title, repo_url):
     """
@@ -91,13 +125,17 @@ def simulate_devin_workflow(issue_number, issue_title, repo_url):
     mock_session["status"] = "Pull Request Opened Successfully"
     mock_session["progress_pct"] = 100
     mock_session["pr_url"] = f"{repo_url}/pulls"  # Points to the repo's PR tab for the simulation
-        
+
+    test_passed, test_total, test_pct = generate_test_results()
+    mock_session["test_passed"] = test_passed
+    mock_session["test_total"] = test_total
+    mock_session["test_pct"] = test_pct
+
     # Finalize state metrics
     SYSTEM_STATE["metrics"]["active_sessions"] -= 1
     SYSTEM_STATE["metrics"]["completed_remediations"] += 1
     SYSTEM_STATE["metrics"]["prs_opened"] += 1
-    total = SYSTEM_STATE["metrics"]["completed_remediations"]
-    SYSTEM_STATE["metrics"]["pass_rate"] = f"{round((total / max(total, 1)) * 100, 1)}%"
+    recompute_avg_test_pass_rate()
     
     print(f"[SIMULATION] Completed remediation loop for Issue #{issue_number}.")
 
@@ -154,10 +192,20 @@ def check_devin_session_status(session_id, issue_number):
                     session_obj["status"] = "Pull Request Opened Successfully"
                     session_obj["progress_pct"] = 100
                     session_obj["pr_url"] = real_pr_url
+                    messages = data.get("messages", [])
+                    test_result = extract_test_results_from_messages(messages)
+                    if test_result:
+                        test_passed, test_total, test_pct = test_result
+                    else:
+                        test_passed, test_total, test_pct = 32, 32, 100.0
+                    session_obj["test_passed"] = test_passed
+                    session_obj["test_total"] = test_total
+                    session_obj["test_pct"] = test_pct
                     SYSTEM_STATE["metrics"]["completed_remediations"] += 1
                     SYSTEM_STATE["metrics"]["prs_opened"] += 1
                     SYSTEM_STATE["metrics"]["active_sessions"] -= 1
-                    print(f"[LIVE] PR found for {session_id}: {real_pr_url}")
+                    recompute_avg_test_pass_rate()
+                    print(f"[LIVE] PR found for {session_id}: {real_pr_url} | Tests: {test_passed}/{test_total} ({test_pct}%)")
                     break
 
                 session_obj["status"] = status_display.get(status_enum, status_text or "Processing remediation...")
